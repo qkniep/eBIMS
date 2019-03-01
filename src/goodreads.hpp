@@ -6,14 +6,16 @@
 
 
 class Goodreads {
-	static std::chrono::time_point<std::chrono::steady_clock> lastRequestTime;
+	std::chrono::time_point<std::chrono::steady_clock> lastRequestTime;
+	std::string developerKey;
 
 
 public:
-	static bool search(std::string str);
+	Goodreads(std::string devKey);
+	bool search(std::string str);
 
 private:
-	static bool isReady();
+	bool isReady();
 };
 
 #endif /* !GOODREADS_HPP */

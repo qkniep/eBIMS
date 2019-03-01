@@ -10,10 +10,9 @@
 #include "pugixml/pugixml.hpp"
 
 
-#define DEV_KEY "nMJozBknjHBc7NdCxG88Dg"
-
-
-auto Goodreads::lastRequestTime = std::chrono::steady_clock::now();
+Goodreads::Goodreads(std::string devKey)
+	: lastRequestTime(std::chrono::steady_clock::now())
+	, developerKey(devKey) {}
 
 
 bool Goodreads::search(const std::string str) {
@@ -26,7 +25,7 @@ bool Goodreads::search(const std::string str) {
 		std::stringstream url;
 		url << "https://www.goodreads.com/search/index.xml";
 		url << "?q=" << curlpp::escape(str);
-		url << "&key=" << DEV_KEY;
+		url << "&key=" << developerKey;
 		std::stringstream xmlData;
 		xmlData << curlpp::options::Url(url.str());
 

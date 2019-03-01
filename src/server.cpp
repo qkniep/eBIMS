@@ -9,16 +9,15 @@
 #include <boost/filesystem.hpp>
 #include <boost/range/iterator_range.hpp>
 
-#include "goodreads.hpp"
 #include "server_config.hpp"
 
 
 namespace fs = boost::filesystem;
 
 
-Server::Server() : db(DBFILE) {}
-
-
+Server::Server()
+	: db(DBFILE)
+	, gr(GOODREADS_DEVKEY) {}
 
 
 void Server::init() {
@@ -44,7 +43,7 @@ void Server::init() {
 
 
 void Server::handleClient() {
-	int new_socket, valread;
+	int clientSocket, valread;
 	char buffer[1024] = {0};
 
 	if (listen(masterSocket, 3) < 0) {
@@ -52,11 +51,11 @@ void Server::handleClient() {
 		exit(EXIT_FAILURE);
 	}
 	int addrlen = sizeof(address);
-	if ((new_socket = accept(masterSocket, (struct sockaddr*) &address, (socklen_t*) &addrlen)) < 0) {
+	if ((clientSocket = accept(masterSocket, (struct sockaddr*) &address, (socklen_t*) &addrlen)) < 0) {
 		perror("accept failed");
 		exit(EXIT_FAILURE);
 	}
-	valread = read(new_socket, buffer, 1024);
+	valread = read(clientSocket, buffer, 1024);
 
 	std::cout << "New Client connected" << std::endl;
 
@@ -66,7 +65,7 @@ void Server::handleClient() {
 
 void Server::backgroundProcessing() {
 	for (auto &f : fs::directory_iterator("Books/")) {
-		while (!Goodreads::search(f.path().stem().string())) {
+		while (!gr.search(f.path().stem().string())) {
 			usleep(50000);
 		}
 		db.insertBook(f.path().stem().string(), "<author>");
