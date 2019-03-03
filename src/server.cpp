@@ -1,10 +1,8 @@
 #include "server.hpp"
 
-#include <unistd.h>
 #include <sys/socket.h>
 //#include <filesystem>
 #include <iostream>
-#include <thread>
 
 #include <boost/filesystem.hpp>
 #include <boost/range/iterator_range.hpp>
@@ -43,8 +41,7 @@ void Server::init() {
 
 
 void Server::handleClient() {
-	int clientSocket, valread;
-	char buffer[1024] = {0};
+	int clientSocket, valrecv;
 
 	if (listen(masterSocket, 3) < 0) {
 		perror("listen failed");
@@ -55,27 +52,30 @@ void Server::handleClient() {
 		perror("accept failed");
 		exit(EXIT_FAILURE);
 	}
-	valread = read(clientSocket, buffer, 1024);
-
 	std::cout << "New Client connected" << std::endl;
 
-	db.printFindBooks(buffer);
+	for (;;) {
+		char buffer[1024] = {0};
+		valrecv = recv(clientSocket, buffer, 1024, 0);
+		db.sendFindBooks(clientSocket, buffer);
+	}
 }
 
 
 void Server::backgroundProcessing() {
-	for (auto &f : fs::directory_iterator("Books/")) {
-		while (!gr.search(f.path().stem().string())) {
+	for (auto &file : fs::directory_iterator("Books/")) {
+		std::optional<struct book> book;
+		while (!(book = gr.search(file.path().stem().string()))) {
 			usleep(50000);
 		}
-		db.insertBook(f.path().stem().string(), "<author>");
-		db.printBookTable();
+		db.insertBook(*book);
+		//db.printBookTable();
 	}
 }
 
 
 void Server::mainLoop() {
-	//std::thread bgThread(backgroundProcessing);
+	//backgroundProcessing();
 
 	for (;;) {
 		handleClient();

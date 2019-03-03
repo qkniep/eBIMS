@@ -5,6 +5,8 @@
 
 #include <sqlite_modern_cpp.h>
 
+#include "book.hpp"
+
 
 class Database {
 	sqlite::database db;
@@ -13,8 +15,8 @@ class Database {
 public:
 	Database(std::string filename);
 	void printBookTable();
-	void printFindBooks(char* buffer);
-	void insertBook(std::string title, std::string author);
+	void sendFindBooks(int socket, char* buffer);
+	void insertBook(const struct book& book);
 };
 
 #endif /* !DATABASE_HPP */

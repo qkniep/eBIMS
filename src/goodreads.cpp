@@ -15,8 +15,8 @@ Goodreads::Goodreads(std::string devKey)
 	, developerKey(devKey) {}
 
 
-bool Goodreads::search(const std::string str) {
-	if (!isReady()) return false;
+std::optional<struct book> Goodreads::search(const std::string str) {
+	if (!isReady()) return {};
 
 	try {
 		curlpp::Cleanup cleaner;
@@ -34,7 +34,7 @@ bool Goodreads::search(const std::string str) {
 		// Parse the XML result
 		pugi::xml_document doc;
 		pugi::xml_parse_result result = doc.load(xmlData);
-		if (!result) return false;
+		if (!result) return {};
 
 		pugi::xml_node searchResult = doc.child("GoodreadsResponse")
 				.child("search").child("results").child("work")
@@ -46,13 +46,13 @@ bool Goodreads::search(const std::string str) {
 
 		std::cout << "[" << id << "]  " << title << " – " << author << std::endl;
 
-		return true;
+		return (struct book){(uint32_t) atoi(id), title, author};
 	} catch (curlpp::LogicError& e) {
 		std::cout << e.what() << std::endl;
 	} catch (curlpp::RuntimeError& e) {
 		std::cout << e.what() << std::endl;
 	}
-	return false;
+	return {};
 }
 
 

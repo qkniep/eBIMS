@@ -2,7 +2,10 @@
 #define GOODREADS_HPP
 
 #include <chrono>
+#include <optional>
 #include <string>
+
+#include "book.hpp"
 
 
 class Goodreads {
@@ -12,7 +15,7 @@ class Goodreads {
 
 public:
 	Goodreads(std::string devKey);
-	bool search(std::string str);
+	std::optional<struct book> search(std::string str);
 
 private:
 	bool isReady();
