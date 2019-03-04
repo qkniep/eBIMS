@@ -7,18 +7,18 @@ just some eBook Management System
 ## Getting Started
 
 ### Install Dependencies
+* [libcurl](https://curl.haxx.se/libcurl)
 * [cURLpp](https://github.com/jpbarrette/curlpp)
-* [termcolor](https://github.com/ikalnytskyi/termcolor)
 * [SQLite](https://www.sqlite.org)
-* [sqlite_modern_cpp](https://github.com/SqliteModernCpp/sqlite_modern_cpp)
 
 ## Acknowledgments
 
 Third Party Libraries:
-
 * [pugixml](https://github.com/zeux/pugixml)
+* [sqlite_modern_cpp](https://github.com/SqliteModernCpp/sqlite_modern_cpp)
+* [termcolor](https://github.com/ikalnytskyi/termcolor)
 
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.\
-Copyright 2019 © Q. Kniep
+Copyright 2019 © Quentin M. Kniep

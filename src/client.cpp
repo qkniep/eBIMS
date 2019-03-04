@@ -1,13 +1,13 @@
 #include "client.hpp"
 
-#include <netinet/in.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
 #include <sys/socket.h>
+#include <string.h>
 #include <iostream>
 #include <sstream>
 
-#include <termcolor/termcolor.hpp>
-
+#include "termcolor/termcolor.hpp"
 #include "client_config.hpp"
 
 
@@ -68,7 +68,7 @@ void Client::mainLoop() {
 }
 
 
-int main() {
+int main(int /*argc*/, char** /*argv*/) {
 	Client c;
 	c.connectToServer(SERVER_ADDR, PORT);
 	c.mainLoop();

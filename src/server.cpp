@@ -1,16 +1,15 @@
 #include "server.hpp"
 
 #include <sys/socket.h>
-//#include <filesystem>
+#include <unistd.h>
+#include <filesystem>
 #include <iostream>
-
-#include <boost/filesystem.hpp>
-#include <boost/range/iterator_range.hpp>
 
 #include "server_config.hpp"
 
 
-namespace fs = boost::filesystem;
+//namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 
 Server::Server()
@@ -41,7 +40,7 @@ void Server::init() {
 
 
 void Server::handleClient() {
-	int clientSocket, valrecv;
+	int clientSocket;
 
 	if (listen(masterSocket, 3) < 0) {
 		perror("listen failed");
@@ -52,11 +51,14 @@ void Server::handleClient() {
 		perror("accept failed");
 		exit(EXIT_FAILURE);
 	}
-	std::cout << "New Client connected" << std::endl;
+	std::cout << "New Client connected." << std::endl;
 
 	for (;;) {
 		char buffer[1024] = {0};
-		valrecv = recv(clientSocket, buffer, 1024, 0);
+		if (recv(clientSocket, buffer, 1024, 0) == 0) {
+			std::cout << "Client closed connection." << std::endl;
+			return;
+		}
 		db.sendFindBooks(clientSocket, buffer);
 	}
 }
@@ -66,7 +68,7 @@ void Server::backgroundProcessing() {
 	for (auto &file : fs::directory_iterator("Books/")) {
 		std::optional<struct book> book;
 		while (!(book = gr.search(file.path().stem().string()))) {
-			usleep(50000);
+			sleep(50);
 		}
 		db.insertBook(*book);
 		//db.printBookTable();
@@ -83,7 +85,7 @@ void Server::mainLoop() {
 }
 
 
-int main() {
+int main(int /*argc*/, char** /*argv*/) {
 	Server s;
 	s.init();
 	s.mainLoop();

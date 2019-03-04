@@ -3,8 +3,7 @@
 
 #include <string>
 
-#include <sqlite_modern_cpp.h>
-
+#include "sqlite_modern_cpp/sqlite_modern_cpp.h"
 #include "book.hpp"
 
 
