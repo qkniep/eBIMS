@@ -1,6 +1,6 @@
 #include "database.hpp"
 
-#include <sys/socket.h>
+#include <unistd.h>
 #include <sstream>
 
 
@@ -55,6 +55,6 @@ void Database::sendFindBooks(int socket, char* buffer) {
 		std::cout << e.what() << std::endl;
 	}
 	ss_i << ss.str().length();
-	send(socket, ss_i.str().c_str(), 128, 0);
-	send(socket, ss.str().c_str(), ss.str().length(), 0);
+	write(socket, ss_i.str().c_str(), 1024);
+	write(socket, ss.str().c_str(), ss.str().length());
 }

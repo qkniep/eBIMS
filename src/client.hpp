@@ -7,13 +7,16 @@
 
 
 class Client {
-	int serverSocket, valrecv;
+	std::string serverIP;
+	uint16_t serverPort;
+	int serverSocket;
 	struct sockaddr_in serverAddress;
 
 
 public:
-	Client();
-	void connectToServer(std::string ip, uint16_t port);
+	Client(std::string ip, uint16_t port);
+	void resetSocket();
+	void connectToServer();
 	void mainLoop();
 };
 

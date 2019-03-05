@@ -21,7 +21,8 @@ public:
 
 private:
 	void backgroundProcessing();
-	void handleClient();
+	int acceptClient();
+	void handleClient(int clientSocket);
 	void printBookTable();
 };
 

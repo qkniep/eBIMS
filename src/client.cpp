@@ -2,75 +2,83 @@
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
-#include <sys/socket.h>
 #include <string.h>
 #include <iostream>
-#include <sstream>
 
-#include "termcolor/termcolor.hpp"
 #include "client_config.hpp"
+#include "util.hpp"
+
+#define BUFFER_SIZE 1024
 
 
-Client::Client() : serverSocket(0) {
+Client::Client(std::string ip, uint16_t port)
+		: serverIP(ip), serverPort(port), serverSocket(0) {
+	resetSocket();
+	connectToServer();
+}
+
+
+void Client::resetSocket() {
+	if (serverSocket) close(serverSocket);
+
 	if ((serverSocket = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		printf("Socket creation error\n");
-		exit(EXIT_FAILURE);
+		fatalError("Failed to open socket.");
 	}
 }
 
 
-void Client::connectToServer(std::string ip, uint16_t port) {
+void Client::connectToServer() {
+	std::cout << "Trying to establish connection with: "
+		<< serverIP << ":" << serverPort << std::endl;
+
 	memset(&serverAddress, '0', sizeof(serverAddress));
-
 	serverAddress.sin_family = AF_INET;
-	serverAddress.sin_port = htons(port);
+	serverAddress.sin_port = htons(serverPort);
 
-	if (inet_pton(AF_INET, ip.c_str(), &serverAddress.sin_addr) <= 0) {
-		std::cout << termcolor::red << "ERROR" << termcolor::reset
-			<< " Invalid address: " << ip << std::endl;
-		exit(EXIT_FAILURE);
+	if (inet_pton(AF_INET, serverIP.c_str(), &serverAddress.sin_addr) <= 0) {
+		fatalError("Invalid server IP address.");
 	}
 
 	if (connect(serverSocket, (struct sockaddr*) &serverAddress,
 				sizeof(serverAddress)) < 0) {
-		std::cout << termcolor::red << "ERROR" << termcolor::reset
-			<< " Connection to Book Server failed. Try again." << std::endl;
-		exit(EXIT_FAILURE);
+		fatalError("Connection to Book Server failed.");
 	}
+
+	successMessage("Connection Successful!");
 }
 
 
 void Client::mainLoop() {
-	for (;;) {
-		std::string query;
-		char buffer[1024] = {0};
+	std::string query;
+	char buffer[BUFFER_SIZE+1];
+	int bytesRead, contentLength;
 
+	for (;;) {
 		std::cout << "> ";
 		std::cin >> query;
-		send(serverSocket, query.c_str(), query.length(), 0);
+		write(serverSocket, query.c_str(), query.length());
 
-		recv(serverSocket, buffer, 1024, 0);
-		int content_len = atoi(buffer);
-		memset(buffer, 0, 1024);
-		std::stringstream ss;
-		while (content_len > 0 && (valrecv = recv(serverSocket, buffer, 1024, 0))) {
-			content_len -= valrecv;
-			ss << std::string(buffer);
-			memset(buffer, 0, 1024);
+		bytesRead = read(serverSocket, buffer, BUFFER_SIZE);
+		buffer[bytesRead] = '\0';
+		contentLength = atoi(buffer);
+
+		while (contentLength > 0
+				&& (bytesRead = read(serverSocket, buffer, BUFFER_SIZE))) {
+			buffer[bytesRead] = '\0';
+			contentLength -= bytesRead;
+			std::cout << std::string(buffer);
 		}
-		if (valrecv == 0) {
-			printf("Book Server closed the connection.\n");
-			exit(EXIT_FAILURE);
+		if (bytesRead == 0) {
+			generalWarning("Book Server closed the connection.");
+			resetSocket();
+			connectToServer();
 		}
-		std::cout << ss.str();
-		fflush(stdout);
 	}
 }
 
 
 int main(int /*argc*/, char** /*argv*/) {
-	Client c;
-	c.connectToServer(SERVER_ADDR, PORT);
+	Client c(SERVER_ADDR, PORT);
 	c.mainLoop();
 	return EXIT_SUCCESS;
 }
