@@ -3,8 +3,10 @@
 
 #include <netinet/in.h>
 
+#include "clientHandler.hpp"
 #include "database.hpp"
 #include "goodreads.hpp"
+#include "server_config.hpp"
 
 
 class Server {
@@ -12,6 +14,7 @@ class Server {
 	Goodreads gr;
 	int masterSocket;
 	struct sockaddr_in address;
+	ClientHandler clientHandlers[MAX_CLIENTS];
 
 
 public:
@@ -22,7 +25,6 @@ public:
 private:
 	void backgroundProcessing();
 	int acceptClient();
-	void handleClient(int clientSocket);
 	void printBookTable();
 };
 

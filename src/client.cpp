@@ -3,6 +3,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <string.h>
+#include <unistd.h>
 #include <iostream>
 
 #include "client_config.hpp"
@@ -22,7 +23,7 @@ void Client::resetSocket() {
 	if (serverSocket) close(serverSocket);
 
 	if ((serverSocket = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		fatalError("Failed to open socket.");
+		util::fatalError("Failed to open socket.");
 	}
 }
 
@@ -36,15 +37,15 @@ void Client::connectToServer() {
 	serverAddress.sin_port = htons(serverPort);
 
 	if (inet_pton(AF_INET, serverIP.c_str(), &serverAddress.sin_addr) <= 0) {
-		fatalError("Invalid server IP address.");
+		util::fatalError("Invalid server IP address.");
 	}
 
 	if (connect(serverSocket, (struct sockaddr*) &serverAddress,
 				sizeof(serverAddress)) < 0) {
-		fatalError("Connection to Book Server failed.");
+		util::fatalError("Connection to Book Server failed.");
 	}
 
-	successMessage("Connection Successful!");
+	util::successMessage("Connection Successful!");
 }
 
 
@@ -69,7 +70,7 @@ void Client::mainLoop() {
 			std::cout << std::string(buffer);
 		}
 		if (bytesRead == 0) {
-			generalWarning("Book Server closed the connection.");
+			util::generalWarning("Book Server closed the connection.");
 			resetSocket();
 			connectToServer();
 		}

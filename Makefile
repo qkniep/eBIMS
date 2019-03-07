@@ -3,9 +3,10 @@ CXX         = g++
 SRCDIR      = src
 BUILDDIR    = build
 
-CLIENT_SRCS := src/client.cpp
+CLIENT_SRCS := src/client.cpp src/util.cpp
 CLIENT_OBJS := $(CLIENT_SRCS:%=$(BUILDDIR)/%.o)
-SERVER_SRCS := src/server.cpp src/goodreads.cpp src/database.cpp src/pugixml/pugixml.cpp
+SERVER_SRCS := src/server.cpp src/util.cpp src/clientHandler.cpp src/goodreads.cpp \
+               src/database.cpp src/pugixml/pugixml.cpp
 SERVER_OBJS := $(SERVER_SRCS:%=$(BUILDDIR)/%.o)
 DEPS        := $(CLIENT_OBJS:.o=.d) $(SERVER_OBJS:.o=.d)
 
