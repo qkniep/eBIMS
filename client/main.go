@@ -17,14 +17,15 @@ import (
 
 func main() {
 	upload("/Users/qkniep/Downloads/Armada.pdf")
+	fmt.Println("TEST:")
 	search("Test")
-	//download(0, "test.pdf")
+	//download(0, "/tmp/test.pdf")
 }
 
 // Searches for books matching the query string.
 func search(query string) {
-	//resp, err := http.Get("localhost:9898/books?query=" + query)
-	resp, err := http.Get("http://localhost:9898/books")
+	resp, err := http.Get("http://localhost:9898/books?query=" + query)
+	//resp, err := http.Get("http://localhost:9898/books")
 	if err != nil {
 		fmt.Println("Error: Failed to contact server.")
 		return

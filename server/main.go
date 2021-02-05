@@ -5,15 +5,20 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 	"io"
 	"log"
+	"net/http"
 	"os"
+	"strings"
 )
 
-const maxUploadFileSize = 50 << 20 // 50 MiB
+type book struct {
+	title   string
+	author  string
+	formats []string
+}
 
-var books []string
+var books []book
 
 func main() {
 	helloHandler := func(w http.ResponseWriter, req *http.Request) {
@@ -23,7 +28,7 @@ func main() {
 	http.HandleFunc("/hello", helloHandler)
 	http.HandleFunc("/books", bookHandler)
 
-	log.Println("INFO: Server now listening.")
+	log.Println("[Info] Server now listening.")
 	log.Fatal(http.ListenAndServe(":9898", nil))
 }
 
@@ -39,8 +44,13 @@ func bookHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func bookList(w http.ResponseWriter, r *http.Request) {
+	queryStr := r.URL.Query().Get("query")
 	for i, book := range books {
-		fmt.Fprintf(w, "%v - %v\n", i, book)
+		if queryStr != "" && !strings.Contains(book.title, queryStr) {
+			continue
+		}
+		formatsStr := strings.Join(book.formats, ", ")
+		fmt.Fprintf(w, "%v - %v (%s)\n", i, book.title, formatsStr)
 	}
 }
 
@@ -48,16 +58,13 @@ func uploadFile(w http.ResponseWriter, r *http.Request) {
 	log.Println("[Info] User is uploading a new eBook file.")
 
 	// grab the file from the multipart form
-	r.ParseMultipartForm(maxUploadFileSize)
+	r.ParseMultipartForm(10 << 20) // use up to 10 MiB memory
 	file, handler, err := r.FormFile("ebook")
 	if err != nil {
 		log.Println("[Error] Failed to retrieve the file:", err)
 		return
 	}
 	defer file.Close()
-	log.Println("Uploaded File:", handler.Filename)
-	log.Println("File Size:", handler.Size)
-	log.Println("MIME Header:", handler.Header)
 
 	// store it in a temporary file
 	filename := fmt.Sprintf("%v.pdf", len(books))
@@ -68,6 +75,6 @@ func uploadFile(w http.ResponseWriter, r *http.Request) {
 	defer tempFile.Close()
 	io.Copy(tempFile, file)
 
-	books = append(books, handler.Filename)
+	books = append(books, book{handler.Filename, "Some Author", []string{"pdf", "epub"}})
 	fmt.Fprintf(w, "[Info] Successfully Uploaded File\n")
 }
