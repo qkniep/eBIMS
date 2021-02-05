@@ -12,30 +12,28 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
-	"strconv"
 )
 
 func main() {
 	upload("/Users/qkniep/Downloads/Armada.pdf")
-	fmt.Println("TEST:")
-	search("Test")
-	//download(0, "/tmp/test.pdf")
+	search("Arm")
+	download(0, "/tmp/test.pdf")
 }
 
 // Searches for books matching the query string.
-func search(query string) {
+func search(query string) error {
 	resp, err := http.Get("http://localhost:9898/books?query=" + query)
 	//resp, err := http.Get("http://localhost:9898/books")
 	if err != nil {
-		fmt.Println("Error: Failed to contact server.")
-		return
+		return fmt.Errorf("[Error] Failed to contact server: %v", err)
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("Error: Failed to read response body.")
-		return
+		return fmt.Errorf("[Error] Failed to read response body: %v", err)
 	}
 	fmt.Println(string(body))
+
+	return nil
 }
 
 func downloadToKindle(bookID int) {
@@ -43,18 +41,22 @@ func downloadToKindle(bookID int) {
 }
 
 // Downloads the book ...
-func download(bookID int, destination string) {
+func download(bookID int, destination string) error {
 	f, err := os.Create(destination)
 	if err != nil {
-		fmt.Println("Error: Failed to create file on Kindle.")
+		return fmt.Errorf("[Error] Failed to create file: %v", err)
 	}
 	defer f.Close()
 	writer := bufio.NewWriter(f)
-	resp, err := http.Get("localhost:9898/books/" + strconv.Itoa(bookID))
+
+	url := fmt.Sprintf("http://localhost:9898/files/%d.pdf", bookID)
+	resp, err := http.Get(url)
 	if err != nil {
-		fmt.Println("Error: Failed to contact server.")
+		return fmt.Errorf("[Error] Failed to contact server: %v", err)
 	}
 	io.Copy(writer, resp.Body)
+
+	return nil
 }
 
 // Uploads the eBook file to the server.

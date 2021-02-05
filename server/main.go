@@ -27,6 +27,7 @@ func main() {
 
 	http.HandleFunc("/hello", helloHandler)
 	http.HandleFunc("/books", bookHandler)
+	http.Handle("/files/", http.StripPrefix("/files/", http.FileServer(http.Dir("/tmp"))))
 
 	log.Println("[Info] Server now listening.")
 	log.Fatal(http.ListenAndServe(":9898", nil))
