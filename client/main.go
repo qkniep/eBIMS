@@ -16,13 +16,15 @@ import (
 )
 
 func main() {
-	//search("Test")
-	//download(0, "test.pdf")
 	upload("/Users/qkniep/Downloads/Armada.pdf")
+	search("Test")
+	//download(0, "test.pdf")
 }
 
+// Searches for books matching the query string.
 func search(query string) {
-	resp, err := http.Get("localhost:9898/books?query=" + query)
+	//resp, err := http.Get("localhost:9898/books?query=" + query)
+	resp, err := http.Get("http://localhost:9898/books")
 	if err != nil {
 		fmt.Println("Error: Failed to contact server.")
 		return
@@ -39,6 +41,7 @@ func downloadToKindle(bookID int) {
 	download(bookID, "/dev/Kindle...")
 }
 
+// Downloads the book ...
 func download(bookID int, destination string) {
 	f, err := os.Create(destination)
 	if err != nil {
@@ -54,10 +57,10 @@ func download(bookID int, destination string) {
 }
 
 // Uploads the eBook file to the server.
-func upload(filename string) {
+func upload(filename string) error {
 	f, err := os.Open(filename)
 	if err != nil {
-		fmt.Println("Error: Failed to open eBook file.")
+		return fmt.Errorf("[Error] Failed to open eBook file: %v", err)
 	}
 	defer f.Close()
 
@@ -65,30 +68,28 @@ func upload(filename string) {
 	w := multipart.NewWriter(&b)
 	fw, err := w.CreateFormFile("ebook", f.Name())
 	if err != nil {
-		fmt.Println("Error: Failed to create form file.")
-		return
+		return fmt.Errorf("[Error] Failed to create form file: %v", err)
 	}
 	if _, err = io.Copy(fw, f); err != nil {
-		fmt.Println("Error: Failed to copy file contents.")
-		return
+		return fmt.Errorf("[Error] Failed to copy file contents: %v", err)
 	}
 	w.Close()
 
-	req, err := http.NewRequest("POST", "http://localhost:9898/upload", &b)
+	req, err := http.NewRequest("POST", "http://localhost:9898/books", &b)
 	if err != nil {
-		fmt.Println("Error: Failed to create request.")
-		return
+		return fmt.Errorf("[Error] Failed to create request: %v", err)
 	}
 	req.Header.Set("Content-Type", w.FormDataContentType())
 
 	client := &http.Client{}
 	res, err := client.Do(req)
 	if err != nil {
-		fmt.Println("Error: Failed to contact server.")
-		return
+		return fmt.Errorf("[Error] Failed to contact server: %v", err)
 	}
 
 	if res.StatusCode != http.StatusOK {
-		fmt.Println("Error: Bad status", res.Status)
+		return fmt.Errorf("[Error] Bas status: %v", res.Status)
 	}
+
+	return nil
 }

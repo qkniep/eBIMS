@@ -7,11 +7,13 @@ import (
 	"fmt"
 	"net/http"
 	"io"
-	"io/ioutil"
 	"log"
+	"os"
 )
 
 const maxUploadFileSize = 50 << 20 // 50 MiB
+
+var books []string
 
 func main() {
 	helloHandler := func(w http.ResponseWriter, req *http.Request) {
@@ -19,24 +21,37 @@ func main() {
 	}
 
 	http.HandleFunc("/hello", helloHandler)
-	http.HandleFunc("/upload", uploadFile)
+	http.HandleFunc("/books", bookHandler)
 
 	log.Println("INFO: Server now listening.")
 	log.Fatal(http.ListenAndServe(":9898", nil))
 }
 
-func uploadFile(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		log.Println("WARN: The /upload endpoint only supports POST.")
-		return
+func bookHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "GET":
+		bookList(w, r)
+	case "POST":
+		uploadFile(w, r)
+	default:
+		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
-	log.Println("INFO: User is uploading a new eBook file.")
+}
+
+func bookList(w http.ResponseWriter, r *http.Request) {
+	for i, book := range books {
+		fmt.Fprintf(w, "%v - %v\n", i, book)
+	}
+}
+
+func uploadFile(w http.ResponseWriter, r *http.Request) {
+	log.Println("[Info] User is uploading a new eBook file.")
 
 	// grab the file from the multipart form
 	r.ParseMultipartForm(maxUploadFileSize)
 	file, handler, err := r.FormFile("ebook")
 	if err != nil {
-		log.Println("Error Retrieving the File:", err)
+		log.Println("[Error] Failed to retrieve the file:", err)
 		return
 	}
 	defer file.Close()
@@ -45,11 +60,14 @@ func uploadFile(w http.ResponseWriter, r *http.Request) {
 	log.Println("MIME Header:", handler.Header)
 
 	// store it in a temporary file
-	tempFile, err := ioutil.TempFile("/tmp", "upload-*.pdf")
+	filename := fmt.Sprintf("%v.pdf", len(books))
+	tempFile, err := os.Create("/tmp/" + filename)
 	if err != nil {
 		fmt.Println(err)
 	}
 	defer tempFile.Close()
 	io.Copy(tempFile, file)
-	fmt.Fprintf(w, "Successfully Uploaded File\n")
+
+	books = append(books, handler.Filename)
+	fmt.Fprintf(w, "[Info] Successfully Uploaded File\n")
 }
