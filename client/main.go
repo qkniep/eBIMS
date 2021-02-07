@@ -6,6 +6,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -15,12 +16,38 @@ import (
 )
 
 func main() {
-	upload("/Users/qkniep/Downloads/Armada.pdf")
-	search("Arm")
-	//download(0, "/tmp/test.pdf")
-	err := downloadToKindle(0)
-	if err != nil {
-		fmt.Println(err.Error())
+	searchCmd := flag.NewFlagSet("search", flag.ExitOnError)
+	searchQuery := searchCmd.String("query", "", "Substring of the title")
+
+	downloadCmd := flag.NewFlagSet("download", flag.ExitOnError)
+	downloadPath := downloadCmd.String("path", "", "Where to store the downloaded eBook file")
+	toKindle := downloadCmd.Bool("kindle", false, "Download directly to Kindle, if it is connected")
+
+	uploadCmd := flag.NewFlagSet("upload", flag.ExitOnError)
+	uploadFilePath := uploadCmd.String("file", "", "Path to the file you want to upload")
+	//title := uploadCmd.String("title", "", "Path to the file you want to upload")
+	//author := uploadCmd.String("author", "", "Path to the file you want to upload")
+
+	switch os.Args[1] {
+	case "search":
+		searchCmd.Parse(os.Args[2:])
+		err := search(*searchQuery)
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+	case "download":
+		downloadCmd.Parse(os.Args[2:])
+		if *toKindle {
+			err := downloadToKindle(0)
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+		} else {
+			download(0, *downloadPath + "/test.pdf")
+		}
+	case "upload":
+		uploadCmd.Parse(os.Args[2:])
+		upload(*uploadFilePath)
 	}
 }
 
