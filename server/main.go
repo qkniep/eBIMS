@@ -34,13 +34,21 @@ func main() {
 }
 
 func bookHandler(w http.ResponseWriter, r *http.Request) {
+	var err error
 	switch r.Method {
 	case "GET":
 		bookList(w, r)
 	case "POST":
-		uploadFile(w, r)
+		log.Println("[Info] User is uploading a new eBook file")
+		if err = uploadFile(w, r); err == nil {
+			log.Println(w, "[Info] Successfully uploaded File")
+		}
 	default:
+		log.Println("[Warn] Received invalid request:", r)
 		w.WriteHeader(http.StatusMethodNotAllowed)
+	}
+	if err != nil {
+		log.Println("[Error]", err)
 	}
 }
 
@@ -55,27 +63,28 @@ func bookList(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func uploadFile(w http.ResponseWriter, r *http.Request) {
-	log.Println("[Info] User is uploading a new eBook file.")
-
+func uploadFile(w http.ResponseWriter, r *http.Request) error {
 	// grab the file from the multipart form
 	r.ParseMultipartForm(10 << 20) // use up to 10 MiB memory
 	file, handler, err := r.FormFile("ebook")
 	if err != nil {
-		log.Println("[Error] Failed to retrieve the file:", err)
-		return
+		return fmt.Errorf("retrieve file from form: %v", err)
 	}
 	defer file.Close()
 
 	// store it in a temporary file
+	// TODO (@qkniep): use the correct file extension
+	// TODO (@qkniep): store it in a reasonable path
 	filename := fmt.Sprintf("%v.pdf", len(books))
 	tempFile, err := os.Create("/tmp/" + filename)
 	if err != nil {
-		fmt.Println(err)
+		return fmt.Errorf("create temporary file: %v", err)
 	}
 	defer tempFile.Close()
-	io.Copy(tempFile, file)
+	if _, err := io.Copy(tempFile, file); err != nil {
+		return fmt.Errorf("copy file contents: %v", err)
+	}
 
 	books = append(books, book{handler.Filename, "Some Author", []string{"pdf", "epub"}})
-	fmt.Fprintf(w, "[Info] Successfully Uploaded File\n")
+	return nil
 }
