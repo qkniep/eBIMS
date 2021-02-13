@@ -28,26 +28,24 @@ func main() {
 	//title := uploadCmd.String("title", "", "Path to the file you want to upload")
 	//author := uploadCmd.String("author", "", "Path to the file you want to upload")
 
+	var err error
 	switch os.Args[1] {
 	case "search":
 		searchCmd.Parse(os.Args[2:])
-		err := search(*searchQuery)
-		if err != nil {
-			fmt.Println(err.Error())
-		}
+		err = search(*searchQuery)
 	case "download":
 		downloadCmd.Parse(os.Args[2:])
 		if *toKindle {
-			err := downloadToKindle(0)
-			if err != nil {
-				fmt.Println(err.Error())
-			}
+			err = downloadToKindle(0)
 		} else {
-			download(0, *downloadPath + "/test.pdf")
+			err = download(0, *downloadPath + "/test.pdf")
 		}
 	case "upload":
 		uploadCmd.Parse(os.Args[2:])
-		upload(*uploadFilePath)
+		err = upload(*uploadFilePath)
+	}
+	if err != nil {
+		fmt.Println(err)
 	}
 }
 
@@ -55,78 +53,69 @@ func main() {
 func search(query string) error {
 	resp, err := http.Get("http://localhost:9898/books?query=" + query)
 	if err != nil {
-		return fmt.Errorf("[Error] Failed to contact server: %v", err)
+		return fmt.Errorf("Failed to contact server: %v", err)
 	}
 	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("[Error] Failed to read response body: %v", err)
+	if err == nil {
+		fmt.Println(string(body))
 	}
-	fmt.Println(string(body))
 
-	return nil
+	return err
 }
 
+// Downloads the book directly to the Kindle.
+// Returns an error if no Kindle is connected.
 func downloadToKindle(bookID int) error {
 	kindleDir, err := os.Open("/Volumes/Kindle/documents")
 	if err != nil {
-		return fmt.Errorf("[Error] no Kindle connected")
+		return fmt.Errorf("No Kindle connected")
 	}
+	defer kindleDir.Close()
 	return download(bookID, kindleDir.Name() + "/test.pdf")
 }
 
-// Downloads the book ...
+// Downloads the book and writes it to the file given as destination.
 func download(bookID int, destination string) error {
 	f, err := os.Create(destination)
 	if err != nil {
-		return fmt.Errorf("[Error] failed to create file: %v", err)
+		return err
 	}
 	defer f.Close()
 	writer := bufio.NewWriter(f)
 
 	url := fmt.Sprintf("http://localhost:9898/files/%d.pdf", bookID)
 	resp, err := http.Get(url)
-	if err != nil {
-		return fmt.Errorf("[Error] failed to contact server: %v", err)
+	if err == nil {
+		_, err = io.Copy(writer, resp.Body)
 	}
-	io.Copy(writer, resp.Body)
 
-	return nil
+	return err
 }
 
 // Uploads the eBook file to the server.
 func upload(filename string) error {
-	f, err := os.Open(filename)
+	file, err := os.Open(filename)
 	if err != nil {
-		return fmt.Errorf("[Error] failed to open eBook file: %v", err)
+		return err
 	}
-	defer f.Close()
+	defer file.Close()
 
 	var b bytes.Buffer
 	w := multipart.NewWriter(&b)
-	fw, err := w.CreateFormFile("ebook", f.Name())
-	if err != nil {
-		return fmt.Errorf("[Error] failed to create form file: %v", err)
-	}
-	if _, err = io.Copy(fw, f); err != nil {
-		return fmt.Errorf("[Error] failed to copy file contents: %v", err)
-	}
-	w.Close()
+	defer w.Close()
 
-	req, err := http.NewRequest("POST", "http://localhost:9898/books", &b)
+	ffw, err := w.CreateFormFile("ebook", file.Name())
 	if err != nil {
-		return fmt.Errorf("[Error] failed to create request: %v", err)
+		return err
+	} else if _, err = io.Copy(ffw, file); err != nil {
+		return err
 	}
-	req.Header.Set("Content-Type", w.FormDataContentType())
 
 	client := &http.Client{}
-	res, err := client.Do(req)
-	if err != nil {
-		return fmt.Errorf("[Error] failed to contact server: %v", err)
+	res, err := client.Post("http://localhost:9898/books", w.FormDataContentType(), &b)
+	if err == nil && res.StatusCode != http.StatusOK {
+		err = fmt.Errorf("Bad response status %v", res.Status)
 	}
 
-	if res.StatusCode != http.StatusOK {
-		return fmt.Errorf("[Error] bad status: %v", res.Status)
-	}
-
-	return nil
+	return err
 }
