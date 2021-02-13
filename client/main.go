@@ -24,9 +24,13 @@ func main() {
 	toKindle := downloadCmd.Bool("kindle", false, "Download directly to Kindle, if it is connected")
 
 	uploadCmd := flag.NewFlagSet("upload", flag.ExitOnError)
-	uploadFilePath := uploadCmd.String("file", "", "Path to the file you want to upload")
-	//title := uploadCmd.String("title", "", "Path to the file you want to upload")
-	//author := uploadCmd.String("author", "", "Path to the file you want to upload")
+	title := uploadCmd.String("title", "", "Path to the file you want to upload")
+	author := uploadCmd.String("author", "", "Path to the file you want to upload")
+
+	if len(os.Args) < 2 {
+		fmt.Println("Expected one of 'search', 'download', or 'upload' as subcommand.")
+		os.Exit(127)
+	}
 
 	var err error
 	switch os.Args[1] {
@@ -42,7 +46,7 @@ func main() {
 		}
 	case "upload":
 		uploadCmd.Parse(os.Args[2:])
-		err = upload(*uploadFilePath)
+		err = upload(uploadCmd.Arg(0), *title, *author)
 	}
 	if err != nil {
 		fmt.Println(err)
@@ -93,7 +97,7 @@ func download(bookID int, destination string) error {
 }
 
 // Uploads the eBook file to the server.
-func upload(filename string) error {
+func upload(filename, title, author string) error {
 	file, err := os.Open(filename)
 	if err != nil {
 		return err
@@ -102,12 +106,11 @@ func upload(filename string) error {
 
 	var b bytes.Buffer
 	w := multipart.NewWriter(&b)
-	defer w.Close()
-
-	ffw, err := w.CreateFormFile("ebook", file.Name())
-	if err != nil {
-		return err
-	} else if _, err = io.Copy(ffw, file); err != nil {
+	w.WriteField("title", title)
+	w.WriteField("author", author)
+	ffw, _ := w.CreateFormFile("ebook", file.Name())
+	io.Copy(ffw, file)
+	if err := w.Close(); err != nil {
 		return err
 	}
 

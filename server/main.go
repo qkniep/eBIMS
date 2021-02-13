@@ -29,7 +29,7 @@ func main() {
 	http.HandleFunc("/books", bookHandler)
 	http.Handle("/files/", http.StripPrefix("/files/", http.FileServer(http.Dir("/tmp"))))
 
-	log.Println("[Info] Server now listening.")
+	log.Println("[Info] Server now listening on localhost:9898")
 	log.Fatal(http.ListenAndServe(":9898", nil))
 }
 
@@ -41,7 +41,7 @@ func bookHandler(w http.ResponseWriter, r *http.Request) {
 	case "POST":
 		log.Println("[Info] User is uploading a new eBook file")
 		if err = uploadFile(w, r); err == nil {
-			log.Println(w, "[Info] Successfully uploaded File")
+			log.Println("[Info] Successfully uploaded File")
 		}
 	default:
 		log.Println("[Warn] Received invalid request:", r)
@@ -66,7 +66,7 @@ func bookList(w http.ResponseWriter, r *http.Request) {
 func uploadFile(w http.ResponseWriter, r *http.Request) error {
 	// grab the file from the multipart form
 	r.ParseMultipartForm(10 << 20) // use up to 10 MiB memory
-	file, handler, err := r.FormFile("ebook")
+	file, _, err := r.FormFile("ebook")
 	if err != nil {
 		return fmt.Errorf("retrieve file from form: %v", err)
 	}
@@ -85,6 +85,6 @@ func uploadFile(w http.ResponseWriter, r *http.Request) error {
 		return fmt.Errorf("copy file contents: %v", err)
 	}
 
-	books = append(books, book{handler.Filename, "Some Author", []string{"pdf", "epub"}})
+	books = append(books, book{r.FormValue("title"), r.FormValue("author"), []string{"pdf", "epub"}})
 	return nil
 }
