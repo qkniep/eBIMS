@@ -61,7 +61,7 @@ func search(query string) error {
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err == nil {
-		fmt.Println(string(body))
+		fmt.Printf(string(body))
 	}
 
 	return err

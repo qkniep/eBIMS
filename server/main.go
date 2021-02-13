@@ -4,6 +4,8 @@
 package main
 
 import (
+	"bufio"
+	"encoding/gob"
 	"fmt"
 	"io"
 	"log"
@@ -18,14 +20,17 @@ const (
 )
 
 type book struct {
-	title   string
-	author  string
-	formats []string
+	Title   string
+	Author  string
+	Formats []string
 }
 
 var books []book
 
 func main() {
+	load(&books, "books.gob")
+	log.Printf("[Info] Loaded %v book entries from disk", len(books))
+
 	http.HandleFunc("/books", bookHandler)
 	http.Handle("/files/", http.StripPrefix("/files/", http.FileServer(http.Dir(booksDir))))
 
@@ -55,11 +60,11 @@ func bookHandler(w http.ResponseWriter, r *http.Request) {
 func bookList(w http.ResponseWriter, r *http.Request) {
 	queryStr := r.URL.Query().Get("query")
 	for i, book := range books {
-		if queryStr != "" && !strings.Contains(book.title, queryStr) {
+		if queryStr != "" && !strings.Contains(book.Title, queryStr) {
 			continue
 		}
-		formatsStr := strings.Join(book.formats, ", ")
-		fmt.Fprintf(w, "%v - %v (%s)\n", i, book.title, formatsStr)
+		formatsStr := strings.Join(book.Formats, ", ")
+		fmt.Fprintf(w, "%v - %v [%s]\n", i, book.Title, formatsStr)
 	}
 }
 
@@ -75,7 +80,7 @@ func uploadFile(w http.ResponseWriter, r *http.Request) error {
 	// store it in a temporary file
 	// TODO (@qkniep): use the correct file extension
 	// TODO (@qkniep): store it in a reasonable path
-	filePath := booksDir + fmt.Sprintf("%v.pdf", len(books))
+	filePath := booksDir + fmt.Sprintf("/%v.pdf", len(books))
 	permanentFile, err := os.Create(filePath)
 	if err != nil {
 		return fmt.Errorf("create file %v on disk: %v", filePath, err)
@@ -85,6 +90,35 @@ func uploadFile(w http.ResponseWriter, r *http.Request) error {
 		return fmt.Errorf("copy file contents: %v", err)
 	}
 
+	// add an entry into our list of books
 	books = append(books, book{r.FormValue("title"), r.FormValue("author"), []string{"pdf"}})
+	dump(books, "books.gob")
 	return nil
+}
+
+func dump(obj interface{}, filename string) {
+	f, err := os.Create(booksDir + "/" + filename)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	w := bufio.NewWriter(f)
+	enc := gob.NewEncoder(w)
+	enc.Encode(obj)
+	if err := w.Flush(); err != nil {
+		log.Printf("dump %v to disk: %v\n", filename, err)
+	}
+}
+
+func load(obj interface{}, filename string) {
+	f, err := os.Open(booksDir + "/" + filename)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	r := bufio.NewReader(f)
+	dec := gob.NewDecoder(r)
+	if err := dec.Decode(obj); err != nil {
+		log.Printf("load %v from disk: %v\n", filename, err)
+	}
 }
