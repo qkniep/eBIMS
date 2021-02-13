@@ -12,6 +12,11 @@ import (
 	"strings"
 )
 
+const (
+	address = "localhost:9898"
+	booksDir = "Books"
+)
+
 type book struct {
 	title   string
 	author  string
@@ -21,16 +26,11 @@ type book struct {
 var books []book
 
 func main() {
-	helloHandler := func(w http.ResponseWriter, req *http.Request) {
-		io.WriteString(w, "Hello, world!\n")
-	}
-
-	http.HandleFunc("/hello", helloHandler)
 	http.HandleFunc("/books", bookHandler)
-	http.Handle("/files/", http.StripPrefix("/files/", http.FileServer(http.Dir("/tmp"))))
+	http.Handle("/files/", http.StripPrefix("/files/", http.FileServer(http.Dir(booksDir))))
 
-	log.Println("[Info] Server now listening on localhost:9898")
-	log.Fatal(http.ListenAndServe(":9898", nil))
+	log.Println("[Info] Server now listening on", address)
+	log.Fatal(http.ListenAndServe(address, nil))
 }
 
 func bookHandler(w http.ResponseWriter, r *http.Request) {
@@ -66,25 +66,25 @@ func bookList(w http.ResponseWriter, r *http.Request) {
 func uploadFile(w http.ResponseWriter, r *http.Request) error {
 	// grab the file from the multipart form
 	r.ParseMultipartForm(10 << 20) // use up to 10 MiB memory
-	file, _, err := r.FormFile("ebook")
+	memFile, _, err := r.FormFile("ebook")
 	if err != nil {
-		return fmt.Errorf("retrieve file from form: %v", err)
+		return fmt.Errorf("retrieve form file: %v", err)
 	}
-	defer file.Close()
+	defer memFile.Close()
 
 	// store it in a temporary file
 	// TODO (@qkniep): use the correct file extension
 	// TODO (@qkniep): store it in a reasonable path
-	filename := fmt.Sprintf("%v.pdf", len(books))
-	tempFile, err := os.Create("/tmp/" + filename)
+	filePath := booksDir + fmt.Sprintf("%v.pdf", len(books))
+	permanentFile, err := os.Create(filePath)
 	if err != nil {
-		return fmt.Errorf("create temporary file: %v", err)
+		return fmt.Errorf("create file %v on disk: %v", filePath, err)
 	}
-	defer tempFile.Close()
-	if _, err := io.Copy(tempFile, file); err != nil {
+	defer permanentFile.Close()
+	if _, err := io.Copy(permanentFile, memFile); err != nil {
 		return fmt.Errorf("copy file contents: %v", err)
 	}
 
-	books = append(books, book{r.FormValue("title"), r.FormValue("author"), []string{"pdf", "epub"}})
+	books = append(books, book{r.FormValue("title"), r.FormValue("author"), []string{"pdf"}})
 	return nil
 }
