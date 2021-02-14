@@ -78,9 +78,8 @@ func uploadFile(w http.ResponseWriter, r *http.Request) error {
 	defer memFile.Close()
 
 	// store it in a temporary file
-	// TODO (@qkniep): use the correct file extension
-	// TODO (@qkniep): store it in a reasonable path
-	filePath := booksDir + fmt.Sprintf("/%v.pdf", len(books))
+	format := r.FormValue("format")
+	filePath := fmt.Sprintf("%s/%d.%s", booksDir, len(books), format)
 	permanentFile, err := os.Create(filePath)
 	if err != nil {
 		return fmt.Errorf("create file %v on disk: %v", filePath, err)
@@ -91,7 +90,7 @@ func uploadFile(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	// add an entry into our list of books
-	books = append(books, book{r.FormValue("title"), r.FormValue("author"), []string{"pdf"}})
+	books = append(books, book{r.FormValue("title"), r.FormValue("author"), []string{format}})
 	dump(books, "books.gob")
 	return nil
 }

@@ -15,6 +15,8 @@ import (
 	"os"
 )
 
+const kindleDir = "/Volumes/Kindle/documents"
+
 func main() {
 	searchCmd := flag.NewFlagSet("search", flag.ExitOnError)
 	searchQuery := searchCmd.String("query", "", "Substring of the title")
@@ -24,8 +26,9 @@ func main() {
 	toKindle := downloadCmd.Bool("kindle", false, "Download directly to Kindle, if it is connected")
 
 	uploadCmd := flag.NewFlagSet("upload", flag.ExitOnError)
-	title := uploadCmd.String("title", "", "Path to the file you want to upload")
-	author := uploadCmd.String("author", "", "Path to the file you want to upload")
+	title := uploadCmd.String("title", "", "Title of the book you are uploading")
+	author := uploadCmd.String("author", "", "(Main) author of the book you are uploading")
+	fileFormat := uploadCmd.String("format", "unknown", "File format of the eBook file")
 
 	if len(os.Args) < 2 {
 		fmt.Println("Expected one of 'search', 'download', or 'upload' as subcommand.")
@@ -46,7 +49,7 @@ func main() {
 		}
 	case "upload":
 		uploadCmd.Parse(os.Args[2:])
-		err = upload(uploadCmd.Arg(0), *title, *author)
+		err = upload(uploadCmd.Arg(0), *title, *author, *fileFormat)
 	}
 	if err != nil {
 		fmt.Println(err)
@@ -63,22 +66,20 @@ func search(query string) error {
 	if err == nil {
 		fmt.Printf(string(body))
 	}
-
 	return err
 }
 
 // Downloads the book directly to the Kindle.
 // Returns an error if no Kindle is connected.
 func downloadToKindle(bookID int) error {
-	kindleDir, err := os.Open("/Volumes/Kindle/documents")
-	if err != nil {
+	if _, err := os.Stat(kindleDir); os.IsNotExist(err) {
 		return fmt.Errorf("No Kindle connected")
 	}
-	defer kindleDir.Close()
-	return download(bookID, kindleDir.Name() + "/test.pdf")
+	return download(bookID, kindleDir + "/test.pdf")
 }
 
 // Downloads the book and writes it to the file given as destination.
+// TODO (@qkniep): support non PDF file formats
 func download(bookID int, destination string) error {
 	f, err := os.Create(destination)
 	if err != nil {
@@ -92,12 +93,11 @@ func download(bookID int, destination string) error {
 	if err == nil {
 		_, err = io.Copy(writer, resp.Body)
 	}
-
 	return err
 }
 
 // Uploads the eBook file to the server.
-func upload(filename, title, author string) error {
+func upload(filename, title, author, format string) error {
 	file, err := os.Open(filename)
 	if err != nil {
 		return err
@@ -108,6 +108,7 @@ func upload(filename, title, author string) error {
 	w := multipart.NewWriter(&b)
 	w.WriteField("title", title)
 	w.WriteField("author", author)
+	w.WriteField("format", format)
 	ffw, _ := w.CreateFormFile("ebook", file.Name())
 	io.Copy(ffw, file)
 	if err := w.Close(); err != nil {
@@ -119,6 +120,5 @@ func upload(filename, title, author string) error {
 	if err == nil && res.StatusCode != http.StatusOK {
 		err = fmt.Errorf("Bad response status %v", res.Status)
 	}
-
 	return err
 }
