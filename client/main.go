@@ -13,6 +13,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"strconv"
 )
 
 const kindleDir = "/Volumes/Kindle/documents"
@@ -29,6 +30,7 @@ func main() {
 	title := uploadCmd.String("title", "", "Title of the book you are uploading")
 	author := uploadCmd.String("author", "", "(Main) author of the book you are uploading")
 	fileFormat := uploadCmd.String("format", "unknown", "File format of the eBook file")
+	merge := uploadCmd.Int("merge", -1, "Book to merge this with. Use this if you are adding a new file format of an existing book. Negative numbers indicate no merge.")
 
 	if len(os.Args) < 2 {
 		fmt.Println("Expected one of 'search', 'download', or 'upload' as subcommand.")
@@ -49,7 +51,7 @@ func main() {
 		}
 	case "upload":
 		uploadCmd.Parse(os.Args[2:])
-		err = upload(uploadCmd.Arg(0), *title, *author, *fileFormat)
+		err = upload(uploadCmd.Arg(0), *title, *author, *fileFormat, *merge)
 	}
 	if err != nil {
 		fmt.Println(err)
@@ -97,7 +99,7 @@ func download(bookID int, destination string) error {
 }
 
 // Uploads the eBook file to the server.
-func upload(filename, title, author, format string) error {
+func upload(filename, title, author, format string, merge int) error {
 	file, err := os.Open(filename)
 	if err != nil {
 		return err
@@ -109,6 +111,7 @@ func upload(filename, title, author, format string) error {
 	w.WriteField("title", title)
 	w.WriteField("author", author)
 	w.WriteField("format", format)
+	w.WriteField("merge", strconv.Itoa(merge))
 	ffw, _ := w.CreateFormFile("ebook", file.Name())
 	io.Copy(ffw, file)
 	if err := w.Close(); err != nil {

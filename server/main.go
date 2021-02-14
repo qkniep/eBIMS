@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -77,9 +78,16 @@ func uploadFile(w http.ResponseWriter, r *http.Request) error {
 	}
 	defer memFile.Close()
 
-	// store it in a temporary file
+	bookID := len(books)
+	mergeWith, err := strconv.Atoi(r.FormValue("merge"))
+	if err == nil && mergeWith >= 0 && mergeWith < len(books) {
+		log.Println("[Info] Merging with book", mergeWith)
+		bookID = mergeWith
+	}
+
+	// store the file on disk
 	format := r.FormValue("format")
-	filePath := fmt.Sprintf("%s/%d.%s", booksDir, len(books), format)
+	filePath := fmt.Sprintf("%s/%d.%s", booksDir, bookID, format)
 	permanentFile, err := os.Create(filePath)
 	if err != nil {
 		return fmt.Errorf("create file %v on disk: %v", filePath, err)
@@ -90,7 +98,11 @@ func uploadFile(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	// add an entry into our list of books
-	books = append(books, book{r.FormValue("title"), r.FormValue("author"), []string{format}})
+	if bookID == len(books) {
+		books = append(books, book{r.FormValue("title"), r.FormValue("author"), []string{format}})
+	} else {
+		books[bookID].Formats = append(books[bookID].Formats, format)
+	}
 	dump(books, "books.gob")
 	return nil
 }
